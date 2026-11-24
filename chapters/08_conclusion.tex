@@ -1,14 +1,14 @@
 \section{Conclusion}
 
 This paper reported an experiment in which pipeline code that no human wrote
-was governed by measurement alone. Humans designed an instrumented harness and
+was evaluated through measured acceptance and rollback. Humans designed an instrumented harness and
 fixed one rule of admission. Inside it, a coding agent mined each completed run
 for a defect signature that recurred, wrote one step against it, and measured
 the result over the questions that step could touch and then over the whole
 development set. Steps whose gains stopped reappearing were taken back out.
 
-RQ1 asked whether measured acceptance and rollback suffices as a quality gate
-for code no human authored. Here it did. The 17 steps the gate admitted
+RQ1 asked how measured acceptance and rollback acted as a quality gate
+for code no human authored. The records supported acceptance and later reversal. The 17 steps the gate admitted
 raised the same generating model from a single-shot 70.9\% to 76.2\% execution
 accuracy on the development set of BIRD and reached 81.3\% on the private test
 set, and the
@@ -16,12 +16,11 @@ same rule that admitted a step removed it once a later run stopped supporting
 it. RQ2 asked what trace-driven mining surfaces and what it justifies. It
 surfaced defects that recur at the level of convention, each of which became a
 predicate that recognized its target and guarded a rewrite: a query executing
-to no rows, a concept bound to a look-alike column, a defensive count over an
+to no rows, a concept bound to a look-alike column, a deduplicating count over an
 identifier. Defects no predicate could recognize produced no step.
 RQ3 asked whether the resulting quality belongs to the model it was measured
-against. It does not. Run unchanged, the pipeline raised all three generating
-models, by 3.2 to 6.7 points, and the largest gain went to the weakest of them.
+against. It does not. With GigaCode, the pipeline raised development accuracy from 59.8\% to
+66.5\%.
 
-Measurement stood in for authorship on one condition---that it kept being
-applied. Every step earned its place by its measured effect on the executed
+Acceptance remained provisional throughout development. Every step earned its place by its measured effect on the executed
 artifact, and no step kept a place the later measurements stopped supporting.

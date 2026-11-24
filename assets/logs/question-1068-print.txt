@@ -1,0 +1,46 @@
+14:01:11 INFO bird_submission.benchmark: [1069/1534 #1068] (moderate) [european_football_2] From 2010 to 2015, what was the average overall rating of players who are higher than 170?
+14:01:14 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:14 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=selector input=144693 create=0 read=144552 output=44
+14:01:14 INFO bird_submission.strategies.max.pipeline.steps.select_tables: [selector] table=Player confidence=100
+14:01:14 INFO bird_submission.strategies.max.pipeline.steps.select_tables: [selector] table=Player_Attributes confidence=100
+14:01:17 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:17 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=reversed_linker input=144317 create=0 read=144188 output=111
+14:01:17 INFO bird_submission.strategies.max.pipeline.steps.reversed_linker: [reversed_linker] no new tables to add
+14:01:19 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:19 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=table_auditor input=144624 create=0 read=144466 output=6
+14:01:19 INFO bird_submission.strategies.max.pipeline.steps.audit_tables: [table-auditor] OK
+14:01:19 INFO bird_submission.strategies.max.pipeline.steps.extract_cell_value_hints: [cell-value:phrases] qid=1068 count=7 phrases=['SUM', 'overall', 'rating', 'higher', 'refers', 'strftime', 'height']
+14:01:19 INFO bird_submission.strategies.max.pipeline.steps.extract_cell_value_hints: [cell-value:summary] qid=1068 phrases=7 hits=0 useful=0
+14:01:24 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:24 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=linker input=11243 create=0 read=11095 output=434
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.resolve_columns: [linker] from 2010 to 2015 (*@\ensuremath{\rightarrow}@*) Player_Attributes.date confidence=10
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.resolve_columns: [linker] average overall rating (*@\ensuremath{\rightarrow}@*) Player_Attributes.overall_rating confidence=10
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.resolve_columns: [linker] average overall rating (*@\ensuremath{\rightarrow}@*) Player_Attributes.id confidence=10
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.resolve_columns: [linker] higher than 170 (*@\ensuremath{\rightarrow}@*) Player.height confidence=10
+14:01:24 INFO bird_submission.strategies.max.column_embeddings: [fk-filter] dropped Player_Attributes.id (*@\ensuremath{\leftrightarrow}@*) player_fifa_api_id (target(*@\ensuremath{\rightarrow}@*)Player_Attributes, conflict(*@\ensuremath{\rightarrow}@*)Player.player_fifa_api_id)
+14:01:24 INFO bird_submission.strategies.max.column_embeddings: [fk-filter] dropped Player_Attributes.id (*@\ensuremath{\leftrightarrow}@*) player_api_id (target(*@\ensuremath{\rightarrow}@*)Player_Attributes, conflict(*@\ensuremath{\rightarrow}@*)Player.player_api_id)
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.inject_conflicts: [inject_conflicts] injected 3 conflict set(s)
+14:01:24 INFO bird_submission.strategies.max.pipeline.steps.focused_schema: [focused_schema] trimmed schema: 11/49 columns kept
+14:01:28 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:28 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=sql_gen input=6732 create=0 read=0 output=133
+14:01:28 INFO bird_submission.utils.executor: [exec:start] SELECT SUM(t2.overall_rating) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE strftime('%Y', t2.date) >= '2010' AND strftime('%Y', t2.date) <= '2015' AND t1.height > 170
+14:01:28 INFO bird_submission.utils.executor: [exec:done] 0.26s rows=1 SELECT SUM(t2.overall_rating) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE strftime('%Y', t2.date) >= '2010' AND strftime('%Y', t2.d
+14:01:28 INFO bird_submission.strategies.max.pipeline.steps.generate_sql: [sql_gen] strong ok, skipping fallback
+14:01:28 INFO bird_submission.strategies.max.pipeline.steps.generate_sql: [fmt-sig] role=strong strftime_year=2
+14:01:30 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:30 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=judge_score input=11951 create=0 read=11187 output=6
+14:01:30 INFO bird_submission.strategies.max.pipeline.steps.judge: [judge] confidence=90 (split)
+14:01:30 INFO bird_submission.strategies.max.pipeline.steps.judge: [judge] confidence >= 90 (*@\textemdash{}@*) keeping original
+14:01:30 INFO bird_submission.utils.executor: [exec:start] SELECT SUM(t2.overall_rating) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE strftime('%Y', t2.date) >= '2010' AND strftime('%Y', t2.date) <= '2015' AND t1.height > 170
+14:01:30 INFO bird_submission.utils.executor: [exec:done] 0.22s rows=1 SELECT SUM(t2.overall_rating) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE strftime('%Y', t2.date) >= '2010' AND strftime('%Y', t2.d
+14:01:33 INFO httpx: HTTP Request: POST http://127.0.0.1:8317/v1/messages "HTTP/1.1 200 OK"
+14:01:33 INFO bird_submission.strategies.max.pipeline.cache: [cache] role=select_auditor input=5198 create=0 read=0 output=6
+14:01:33 INFO bird_submission.strategies.max.pipeline.steps.audit_select: [select-auditor] OK
+14:01:33 INFO bird_submission.strategies.max.pipeline.steps.cast_real_division: [cast-real-div] wrapped 1 numerator(s) in CAST AS REAL
+14:01:33 INFO bird_submission.utils.executor: [exec:start] SELECT CAST(SUM(t2.overall_rating) AS REAL) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.height > 170 AND STRFTIME('%Y',t2.`date`) >= '2010' AND STRFTIME('%Y',t2.`date`) <= '2015'
+14:01:33 INFO bird_submission.utils.executor: [exec:done] 0.22s rows=1 SELECT CAST(SUM(t2.overall_rating) AS REAL) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.height > 170 AND STRFTIME('%Y',t2.`date`
+14:01:33 INFO bird_submission.utils.executor: [exec:start] SELECT CAST(SUM(t2.overall_rating) AS REAL) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE STRFTIME('%Y', t2.date) >= '2010' AND STRFTIME('%Y', t2.date) <= '2015' AND t1.height > 170
+14:01:33 INFO bird_submission.utils.executor: [exec:done] 0.21s rows=1 SELECT CAST(SUM(t2.overall_rating) AS REAL) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE STRFTIME('%Y', t2.date) >= '2010' AND STRFT
+14:01:33 INFO bird_submission.benchmark: (*@\ensuremath{\checkmark}@*) [v15-pipeline] SELECT CAST(SUM(t2.overall_rating) AS REAL) / COUNT(t2.id) FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE STRFTIME('%Y', t2.date) >= '2010' AND STRFTIME('%Y', t2.date) <= '2015' AND t1.height > 170
+14:01:33 INFO httpx: HTTP Request: POST http://localhost:6006/v1/experiments/RXhwZXJpbWVudDox/runs "HTTP/1.1 200 OK"
+14:01:33 INFO httpx: HTTP Request: POST http://localhost:6006/v1/experiment_evaluations "HTTP/1.1 200 OK"
