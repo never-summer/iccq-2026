@@ -1,0 +1,98 @@
+\section{Supplementary experimental details}
+\label{app:records}
+
+\subsection{Material availability}
+An NDA restricts disclosure of the pipeline code and its implementation
+components. We are seeking permission to publish further materials;
+at present, we can provide execution logs.
+
+\subsection{Execution trace example}
+We illustrate the recorded decisions with BIRD development question~1068,
+from the May~27 run using Claude Opus~4.7. The question asks:
+``From 2010 to 2015, what was the average overall rating of players who are
+higher than 170?'' It uses the football database.
+Listing~\ref{lst:trace-query} shows the SQL before the division repair.
+
+\begin{lstlisting}[language=SQL,caption={Generated SQL before the division repair.},label={lst:trace-query},captionpos=t]
+SELECT SUM(t2.overall_rating) / COUNT(t2.id)
+FROM Player AS t1
+INNER JOIN Player_Attributes AS t2
+  ON t1.player_api_id = t2.player_api_id
+WHERE strftime('%Y', t2.date) >= '2010'
+  AND strftime('%Y', t2.date) <= '2015'
+  AND t1.height > 170
+\end{lstlisting}
+
+The execution log reports one returned row, a judge score of 90, and the
+decision to keep the query. The later deterministic step detects division
+without an explicit real-valued operand and inserts a cast. The following
+log excerpt omits timestamps and logger prefixes:
+
+\begin{lstlisting}[caption={Recorded execution and repair decisions.},label={lst:trace-decisions},captionpos=t]
+[exec:done] 0.26s rows=1
+[judge] confidence=90 (split)
+[judge] confidence >= 90 - keeping original
+[cast-real-div] wrapped 1 numerator(s)
+  in CAST AS REAL
+\end{lstlisting}
+
+This development version used a judge threshold of 90; the final
+configuration is described in Section~\ref{sec:pipeline}. The repaired
+projection is:
+
+\begin{lstlisting}[language=SQL]
+CAST(SUM(t2.overall_rating) AS REAL)
+  / COUNT(t2.id)
+\end{lstlisting}
+
+Replaying the saved input SQL returns 68. The repaired query returns
+68.89975315514602. This matches the archived reference result. Thus the
+recorded rewrite changes this answer from incorrect to correct. The value
+before repair was obtained by SQL replay; the final value and verdict were
+stored in the prediction record.
+
+The question identifier links the prediction to its step records. Phoenix
+spans retain step inputs and outputs, timing, and model-call usage where
+available. These records connect the final verdict to the SQL change that
+produced it, even when an earlier judge accepted the original query.
+
+\subsection{Inference usage and timing}
+\label{app:usage}
+Table~\ref{tab:archive-cost} reports the June~4 full-pipeline run on
+1,534 BIRD development questions with Claude Opus~4.8.
+
+\begin{table}[ht]
+\caption{Model usage and question-processing times, June 4. Input tokens
+include cache reads and writes.}
+\label{tab:archive-cost}
+\centering\footnotesize
+\begin{tabular}{@{}lr@{}}
+\toprule
+Measure & Value \\
+\midrule
+Input tokens & 184,173,469 \\
+Output tokens & 937,571 \\
+Model calls & 11,310 \\
+Calls per question & 7.37 \\
+Median duration (s) & 18.69 \\
+95th percentile (s) & 36.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The call count includes 22 failed calls. Durations use 1,533 completed
+question-processing spans; four unfinished attempts are excluded and one
+question's root span is missing. The 95th percentile uses the nearest-rank
+method. Both model slots used Claude Opus~4.8 with a maximum output length
+of 4,096 tokens and no explicit temperature setting. Token totals depend
+on model configuration and cache behavior.
+
+\subsection{Complete log for one question}
+The listing contains every recorded line for question~1068 in the May~27
+run, from its benchmark entry to the start of the next question.
+Timestamps, logger names, and SQL are retained without omissions.
+
+\lstinputlisting[caption={Complete recorded log for question 1068.},
+label={lst:debug-log},captionpos=t,
+escapeinside={(*@}{@*)}
+]{assets/logs/question-1068-print.txt}
