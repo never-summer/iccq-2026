@@ -1,0 +1,27 @@
+\begin{tikzpicture}[
+  font=\sffamily\fontsize{9}{11}\selectfont,
+  box/.style={draw,rounded corners=2pt,align=center,fill=white,
+    text width=4.1cm,minimum height=0.65cm,inner sep=4pt},
+  side/.style={box,text width=1.4cm,font=\sffamily\fontsize{8}{10}\selectfont},
+  flow/.style={-{Latex[length=2mm]},line width=0.6pt}
+]
+\node[box] (records) at (3,0) {Run and inspect dev records};
+\node[box] (agent) at (3,-1.0) {Agent proposes and implements a change};
+\node[box] (affected) at (3,-2.0) {Measure affected questions};
+\node[box] (full) at (3,-3.0) {Measure full dev set};
+\node[box] (review) at (3,-4.0) {Human review of change and results};
+\node[box,fill=black!6] (output) at (3,-5.0) {Merge: pipeline version};
+\node[box] (later) at (3,-6.0) {Later runs: keep or roll back};
+\node[side,fill=black!6] (gold) at (-0.3,-2.5) {Reference SQL\ for evaluation};
+\node[side] (reject) at (6.5,-4.0) {Reject};
+\draw[flow] (records) -- (agent);
+\draw[flow] (agent) -- (affected);
+\draw[flow] (affected) -- (full);
+\draw[flow] (full) -- (review);
+\draw[flow] (review) -- (output);
+\draw[flow] (output) -- (later);
+\draw[flow] (review) -- (reject);
+\draw[flow] (gold.east) -- ++(0.22,0) |- (affected.west);
+\draw[flow] (gold.east) -- ++(0.22,0) |- (full.west);
+\draw[flow] (later.west) -- (-1.35,-6.0) -- (-1.35,0) -- (records.west);
+\end{tikzpicture}

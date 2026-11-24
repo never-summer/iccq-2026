@@ -14,8 +14,8 @@ already accepted. Neither fact is a decomposition. How much of the quality of th
 steps belongs to the gate rather than to the model prior or to the reviewers is
 not measured here.
 
-\paragraph{One benchmark, one task.} Everything above was measured on
-BIRD~\cite{bird} and on text-to-SQL. Section~\ref{sec:impact} states the
+\paragraph{One task.} Development used BIRD~\cite{bird}; transfer was also
+evaluated on SQLite tasks in Spider2-Lite. Section~\ref{sec:impact} states the
 conditions the gate needs in terms other generation tasks satisfy, but no other
 task was put through it, so that transfer is argued and not measured. Part of
 what survived is narrower than the task. Stripping \texttt{DISTINCT} from
@@ -29,26 +29,16 @@ harness before the loop started, so the claim concerns what an agent does
 inside a measurement discipline, not what it does in establishing one. The
 obvious objection is that an agent writes code and could have instrumented the
 benchmark itself. That experiment was not run, and nothing here rules it out.
-One adjacent observation cuts the other way without settling anything. The
-autonomous loop reviewed in Section~\ref{sec:related-work} gave itself a
-feedback loop that logged runtimes of already-passing queries and recorded
-nothing about the failures, code its authors call functionally
-inert~\cite{ai-scientist-enterprise}.
-
 \paragraph{The development set was measured many times.} Every acceptance and
 every rollback rested on runs over the same 1,534 questions, which is sustained
-pressure to fit that set. The private test score of 81.3, above the 76.2 scored
-on the development set, argues against gross overfitting, because no
-development decision could have been fitted to questions nobody saw. It argues
-that for one model, and part of the difference comes from the question sets
-themselves, as single-shot generation also rises between them.
+pressure to fit that set. The private test result provides evidence on questions unavailable during
+development; the difference between test and development scores also depends
+on the question sets.
 The judge's cutoff and the confidence gate on the \texttt{DISTINCT} strip were
 calibrated by sweeping development-set records produced by Claude Opus, and
 whether those values suit another generating model was not tested.
 
-\paragraph{Transfer was measured on the development set only.} The private test
+\paragraph{Cross-model transfer was measured on BIRD development.} The private test
 column of Table~\ref{tab:results} is filled for the agent-built pipeline on one
-model, the model it was developed against. The gains of 3.2 and 6.7 points on
-the other two are development-set gains carrying the pressure just described,
-so nothing here shows the transfer holding on questions the pipeline was never
-measured against.
+model, the model it was developed against. The other-model results are development-set measurements,
+so cross-model generalization to unseen questions remains unmeasured.

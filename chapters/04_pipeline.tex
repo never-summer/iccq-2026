@@ -1,7 +1,7 @@
 \section{Pipeline}
 \label{sec:pipeline}
 
-The pipeline described here is the last of a series. Its first version predated
+The reported pipeline is one version in a series. Its first version predated
 any observed failure: humans handed the agent two papers, on statistical schema
 profiling~\cite{metadata-extraction} and on agentic data
 exploration~\cite{apex-sql}, neither with a public implementation at the time,
@@ -13,10 +13,10 @@ technique. The seed was not exempt from the gate: the profiling half is still
 in the pipeline below, and the exploration half was scored out by a later full
 run.
 
-Seventeen steps survived, in a fixed order, in five groups
+The reported configuration contains seventeen steps in a fixed order, in five groups
 (Figure~\ref{fig:steps}): three for table selection,
 five for schema building, two for generation and review, four targeted
-repairs, and three normalizers. A step receives the question, its evidence
+repairs, and three final rewrites. A step receives the question, its evidence
 hint, and everything the earlier steps recorded, and it either extends that
 context or rewrites the query.
 
@@ -34,20 +34,14 @@ decides:
   \label{fig:steps}
 \end{figure*}
 
-\paragraph{The shared conservative design.} What makes a chain of seventeen
-rewrites viable is a shared conservative design. Each step is an opportunity to
-break a query that was already correct, and the opportunities compound unless
-every step passes a correct query through untouched. Four properties do that
-work. Each step bounds the worst case it can produce and keeps that bound
-small. Each fires only on positive evidence, so a query with no symptom leaves
-a step exactly as it arrived. Detection is deterministic wherever the schema or
-the syntax of the query supplies the evidence. And where a model call is
-involved, it drafts the rewrite but never decides whether the rewrite is kept:
-a check on the rewritten query accepts it or restores the query the step
-received. The gate selected this design rather than prescribing it. An unguarded
-rewrite repairs the questions it was written for and breaks others it never
-considered, so its net effect over 1,534 questions comes out small or negative
-and the step does not survive.
+\paragraph{Guards on SQL rewrites.} The pipeline combines context preparation
+with generation and repair. A repair step checks for a target condition before
+attempting a rewrite. Where the schema or SQL syntax supplies the evidence,
+that check is deterministic. Some repairs use a model to draft a candidate and
+code to check its validity; the judge also uses model votes to select among
+candidates. These checks restrict a step's scope but do not guarantee that a
+correct answer stays correct. Table~\ref{tab:contrib} reports both corrections
+and regressions.
 
 \paragraph{Table selection.} Three model calls narrow the database to the
 tables a question needs. \texttt{select\_tables} proposes a set from a profile
@@ -108,60 +102,59 @@ kept recurring in the run records. \texttt{fix\_join\_type\_mismatch} parses
 the query and compares the declared types of the columns each join equates. A
 join across an INTEGER key and a TEXT key is detected from the schema alone, a
 model drafts the rewrite, and the rewrite is kept only if the mismatch is gone
-and rows come back. \texttt{add\_null\_filters} guards an \texttt{ORDER
-BY \dots{} LIMIT} whose top row carries a NULL sort key---a shape that returns
-a row answering nothing. \texttt{audit\_select\_list} is confined to the
+and rows come back. \texttt{add\_null\_filters} was tuned to BIRD reference
+queries that exclude NULLs from top-row answers. With a \texttt{LIMIT}, a
+NULL in the first returned row, and no NULL-related wording in the question
+or evidence, it adds missing \texttt{IS NOT NULL} filters for ascending sort
+expressions. It restores the original SQL if the rewritten query fails or
+returns no rows. The trigger examines returned values; it does not require
+the NULL value itself to be the sort key.
+\texttt{audit\_select\_list} is confined to the
 projection, where it repairs a look-alike column, a plural question answered
 with a single column, or one field too many. It may touch nothing else, and it
 answered OK on 1,515 of the 1,534 questions of the final run.
-\texttt{repair\_empty\_result} is the backstop for the empty-result symptom:
-read-only probes establish why the result is empty, a model drafts a rewrite
-from what they found, and the step discards about half of those drafts on its
-own validity checks. Its position is load-bearing. It runs last among the steps
-that can change which rows come back, because an earlier arrangement let
-\texttt{audit\_select\_list} run afterwards and revert a repaired query to
-empty. Two of these four did not fire once across the final run, their
-signatures squeezed out upstream as selection and generation improved. Both
-stay, since detection is deterministic and an idle pass costs nothing.
+\texttt{repair\_empty\_result} handles empty results: read-only probes collect
+evidence for a model-generated rewrite, which is then checked before being
+kept. It runs after \texttt{audit\_select\_list} and before the final
+deterministic rewrites. This order avoids a previously observed interaction
+in which the projection audit replaced a repaired query with an empty-result
+query. During development, the agent inspected unusual execution scenarios,
+including empty results and repairs undone by a later step. This analysis
+informed both the guards and the ordering of repairs.
+\texttt{fix\_join\_type\_mismatch} and \texttt{add\_null\_filters}
+remain conditional checks for the scenarios they detect; neither was
+triggered in the final run reported in Table~\ref{tab:contrib}.
 
-\paragraph{Normalizers.} Three deterministic passes over the parsed query close
-the pipeline, and none changes which rows the query returns.
-\texttt{strip\_distinct\_count\_id} removes \texttt{DISTINCT} from counts over
-identifier columns, \texttt{uppercase\_yes\_no} raises lowercase yes and no
-literals to the casing the reference answers use, and
-\texttt{cast\_real\_division} inserts a cast where a projection divides one
-integer by another. Every join and every filter passes through untouched, which
-is what licenses running these three after the backstop. What they rewrite is
-how the answer is expressed: whether a count deduplicates, how a literal is
-cased, whether a division truncates. When results are compared as sets of
-rows, those details alone separate a right answer from a wrong one, so a
-rewrite there can flip a verdict in either direction.
+\paragraph{Final rewrites.} Three passes finish the pipeline. The first is
+the guarded DISTINCT correction described below. The other two were tuned to
+BIRD's output conventions. \texttt{uppercase\_yes\_no} uppercases string
+literals in \texttt{CASE}/\texttt{IIF} outputs when all explicit branch
+outputs are yes/no literals. \texttt{cast\_real\_division} casts a division numerator to
+\texttt{REAL} in a SELECT projection, skipping divisions with an existing
+cast or a decimal literal in an operand. It does not infer operand types
+from the database schema. The restriction to projections avoids changing
+filtering and ordering expressions where integer division may be intended.
+These passes preserve joins and filters but can change returned values.
 
-\paragraph{One step in detail.} \texttt{strip\_distinct\_count\_id} shows what
-the guards are worth. Asked how many X there are, the model defensively writes
-\texttt{COUNT(DISTINCT id)} where the reference query counts joined rows as
-they come, and the two answers diverge exactly when a join fans out. Three of
-the step's four guards are simple: the question must not itself ask for
-distinctness, every counted column must be identifier-shaped, and the stripped
-query must still execute. The fourth is a confidence gate on the judge's score,
-calibrated by replaying the strip against the recorded results of all 1,534
-development questions and sweeping the cutoff, which shows for every candidate
-value which questions it repairs and which it breaks. The chosen value sits in
-the middle of the band the sweep marked safe, away from the edge where the
-strip starts breaking correct answers. In the final run 89 queries reached the
-step carrying a \texttt{COUNT(DISTINCT \dots{})} and 51 were rewritten, the
-step standing down on 21 whose question asked for distinctness, 8 counting a
-column that was not identifier-shaped, and 9 the judge had endorsed above the
-gate.
+\paragraph{Guarded DISTINCT correction.} We developed
+\texttt{strip\_distinct\_count\_id} within the project: the agent wrote the
+code and humans participated in development and review. It combines a syntax
+rewrite with question-level checks, the judge's confidence, and execution
+validation. Some generated queries used \texttt{COUNT(DISTINCT id)} where
+the reference counted joined rows without deduplication. The results differ
+when a join repeats an identifier. The step skips a query if the question or
+evidence contains a distinctness cue, such as ``unique'' or ``different'',
+or if the available judge score is at least 94. It then parses the SQL,
+removes DISTINCT only inside eligible counts whose argument names end in
+\texttt{id}, and keeps the rewrite only if it executes. If no judge score
+is present, the other checks still apply. No new model call is made by this
+step; its confidence input comes from the earlier judge.
 
-Read against RQ2, every step after generation descends from a defect signature
-the run records made legible and some check could then recognize. A query that
-executes to zero rows, on a benchmark where no reference answer is empty,
-licenses \texttt{repair\_empty\_result}. A concept bound to a look-alike with
-no alternative recorded licenses \texttt{inject\_conflicts}. A defensive
-\texttt{COUNT(DISTINCT \dots{})} over an identifier column licenses
-\texttt{strip\_distinct\_count\_id}. A join equating columns of different
-declared type licenses \texttt{fix\_join\_type\_mismatch}. Every pair is the
-same move: a defect visible in the records became a predicate, and the
-predicate became the guard on a rewrite. Defects the records exposed but no
-predicate could recognize produced no step at all.
+The cutoff was selected by replaying the rule on development-set records
+produced by Claude Opus. The cutoff was retained in the transfer runs. In the reported final run, 89 queries reached
+the step with \texttt{COUNT(DISTINCT \dots{})}. It rewrote 51 and skipped 38:
+21 requested distinctness, 8 counted other column types, and 9 met the
+confidence cutoff.
+
+The DISTINCT step rewrote 51 queries and left the other 1,483 unchanged;
+its local effect was 25 corrections and 8 regressions (Table~\ref{tab:contrib}).

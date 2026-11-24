@@ -1,0 +1,88 @@
+\begin{tikzpicture}[
+  font=\sffamily\fontsize{9}{11}\selectfont,
+  pipelinebox/.style={draw,rounded corners=2pt,fill=white,align=center,
+    inner sep=4pt,minimum height=0.58cm,text width=3.4cm},
+  modeldecision/.style={densely dotted,line width=0.8pt},
+  detcode/.style={solid,line width=0.6pt},
+  guardedrewrite/.style={dash pattern=on 4pt off 2pt on 0.7pt off 2pt,line width=0.7pt},
+  stagegroup/.style={draw,rounded corners=5pt,fill=black!4,line width=0.6pt},
+  grouptitle/.style={align=center,font=\sffamily\bfseries\fontsize{10}{12}\selectfont,
+    text width=2.4cm},
+  flow/.style={-{Latex[length=2mm]},line width=0.6pt}
+]
+\path[stagegroup] (0,-1.9) rectangle (16.7,-0.8);
+\path[stagegroup] (0,-4.2) rectangle (16.7,-2.4);
+\path[stagegroup] (0,-6.0) rectangle (16.7,-4.7);
+\path[stagegroup] (0,-8.4) rectangle (16.7,-6.5);
+\path[stagegroup] (0,-10.1) rectangle (16.7,-8.9);
+
+\node[pipelinebox,detcode,text width=4.5cm,fill=black!6] (question) at (5.1,0.15)
+  {Question + evidence};
+\node[pipelinebox,detcode,text width=3.4cm,fill=black!6] (db) at (12.5,0.15)
+  {Database};
+\draw[flow] (question.south) -- (5.1,-0.8);
+\draw[flow] (db.south) -- (12.5,-0.8);
+
+\node[grouptitle] at (1.45,-1.35) {Table selection};
+\node[pipelinebox,modeldecision] (s1) at (5.1,-1.35) {1. \texttt{select\_tables}};
+\node[pipelinebox,modeldecision] (s2) at (9.7,-1.35) {2. \texttt{reversed\_linker}};
+\node[pipelinebox,modeldecision] (s3) at (14.1,-1.35) {3. \texttt{audit\_tables}};
+\draw[flow] (s1) -- (s2);
+\draw[flow] (s2) -- (s3);
+\draw[flow] (8.35,-1.9) -- (8.35,-2.4);
+
+\node[grouptitle] at (1.45,-3.3) {Schema building};
+\node[pipelinebox,detcode,text width=5.1cm] (s4) at (6,-2.88)
+  {4. \texttt{extract\_cell\_value\_hints}};
+\node[pipelinebox,detcode] (s5) at (12.9,-2.88) {5. \texttt{build\_schema}};
+\node[pipelinebox,modeldecision] (s6) at (5.1,-3.72) {6. \texttt{resolve\_columns}};
+\node[pipelinebox,detcode] (s7) at (9.7,-3.72) {7. \texttt{inject\_conflicts}};
+\node[pipelinebox,detcode] (s8) at (14.1,-3.72) {8. \texttt{focused\_schema}};
+\draw[flow] (s4) -- (s5);
+\draw[flow] (s5.south) -- (12.9,-3.3) -- (5.1,-3.3) -- (s6.north);
+\draw[flow] (s6) -- (s7);
+\draw[flow] (s7) -- (s8);
+\draw[flow] (8.35,-4.2) -- (8.35,-4.7);
+
+\node[grouptitle] at (1.45,-5.35) {Generation and review};
+\node[pipelinebox,modeldecision] (s9) at (5.1,-5.35) {9. \texttt{generate\_sql}};
+\node[pipelinebox,modeldecision,text width=7.3cm] (s10) at (12.3,-5.35)
+  {10. \texttt{judge\_sql}\\
+   Score $<76$: four candidates, model votes};
+\draw[flow] (s9) -- (s10);
+\draw[flow] (8.35,-6.0) -- (8.35,-6.5);
+
+\node[grouptitle] at (1.45,-7.45) {Targeted repairs};
+\node[pipelinebox,guardedrewrite,text width=5.5cm] (s11) at (6.1,-6.98)
+  {11. \texttt{fix\_join\_type\_mismatch}};
+\node[pipelinebox,detcode,text width=4.6cm] (s12) at (13.3,-6.98)
+  {12. \texttt{add\_null\_filters}};
+\node[pipelinebox,modeldecision,text width=5.5cm] (s13) at (6.1,-7.92)
+  {13. \texttt{audit\_select\_list}};
+\node[pipelinebox,guardedrewrite,text width=4.6cm] (s14) at (13.3,-7.92)
+  {14. \texttt{repair\_empty\_result}};
+\draw[flow] (s11) -- (s12);
+\draw[flow] (s12.south) -- (13.3,-7.45) -- (6.1,-7.45) -- (s13.north);
+\draw[flow] (s13) -- (s14);
+\draw[flow] (8.35,-8.4) -- (8.35,-8.9);
+
+\node[grouptitle] at (1.45,-9.5) {Final rewrites};
+\node[pipelinebox,detcode,text width=4.2cm] (s15) at (5.4,-9.5)
+  {15. \texttt{strip\_distinct\_count\_id}};
+\node[pipelinebox,detcode,text width=3.5cm] (s16) at (10,-9.5)
+  {16. \texttt{uppercase\_yes\_no}};
+\node[pipelinebox,detcode,text width=3.5cm] (s17) at (14.3,-9.5)
+  {17. \texttt{cast\_real\_division}};
+\draw[flow] (s15) -- (s16);
+\draw[flow] (s16) -- (s17);
+
+\node[pipelinebox,detcode,text width=3.4cm,fill=black!6] (sql) at (8.35,-10.85)
+  {SQL query};
+\draw[flow] (8.35,-10.1) -- (sql.north);
+\node[font=\sffamily\fontsize{9}{11}\selectfont,align=center] at (8.35,-11.55)
+  {Reference SQL is used only by the external evaluation harness.};
+
+\node[pipelinebox,modeldecision,text width=2.8cm] at (3.6,-12.3) {Model decision};
+\node[pipelinebox,detcode,text width=2.8cm] at (8.35,-12.3) {Deterministic code};
+\node[pipelinebox,guardedrewrite,text width=3.3cm] at (13.25,-12.3) {Guarded model rewrite};
+\end{tikzpicture}

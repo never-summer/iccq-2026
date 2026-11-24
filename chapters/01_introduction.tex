@@ -36,27 +36,22 @@ that come out of it. Once an agent writes those stages, a project maintains code
 did not author, aimed at defects it never enumerated, and judged by a number
 that cannot be traced back to any stage.
 
-Existing work does not close the gap. In the pipelines cited above, every stage
-encodes a diagnosis that a human researcher made by reading model outputs and
-deciding what to build next. Work that disciplines the pipeline itself imports
-software engineering practice into its architecture rather than into the
-process that produced it~\cite{deepeye-sql}, and the one autonomous
-development loop for the task judges its proposals by the aggregate benchmark
-score~\cite{ai-scientist-enterprise}. Section~\ref{sec:related-work} reviews
-both lines. Neither asks whether a measurement over the generated artifact is
-by itself enough to govern the code that produces it.
+Existing pipelines report their resulting accuracy, while autonomous
+research frameworks also evaluate proposed pipeline changes~\cite{ai-scientist-enterprise}.
+Our focus is how per-question and per-step records support acceptance and
+later rollback of agent-written code.
 
-This paper reports an experiment in which it was. Humans designed an
+We used measured acceptance and rollback to develop a text-to-SQL pipeline. Humans designed an
 instrumented harness and fixed a single rule of admission. Inside it a frontier coding agent
 (Claude Opus, working in Claude Code) ran the development loop: run the
 benchmark, mine the recorded run for a recurring failure signature, propose a
 pipeline step aimed at that signature, and measure the net effect. Humans
-reviewed each proposal with its measurement, reverted the steps whose gains
+reviewed proposals and could inspect the selected question group, reverted the steps whose gains
 did not survive later runs, and wrote none of the pipeline code. We ask three
 research questions.
 
 \begin{itemize}
-\item[RQ1] Can measured acceptance and rollback act as a sufficient quality
+\item[RQ1] Can measured acceptance and rollback act as a practical quality
   gate for pipeline code that no human wrote, admitting a step only on its
   measured effect on the SQL the pipeline emits and removing it once that
   effect stops holding?
@@ -67,7 +62,8 @@ research questions.
   against?
 \end{itemize}
 
-The thesis of this paper is that measurement can stand in for authorship:
+The thesis of this paper is that execution records can support acceptance
+and rollback of agent-written changes:
 pipeline code written entirely by an agent is fit to keep when every step has
 to earn its place by a measured effect on the executed artifact and loses that
 place as soon as the effect stops holding.
@@ -82,8 +78,7 @@ touched. The paper contributes:
   from a failure signature localized in run records, measure over the closed
   set of questions the change can affect, re-measure over the full question
   set, and roll the change back when a later run argues against it;
-\item an instrumented harness that keeps the gate cheap enough to run
-  repeatedly: every generated query is executed and scored against a reference
+\item an instrumented harness used throughout repeated evaluations: every generated query is executed and scored against a reference
   answer,
   each disagreement is classified row by row, every step reports its own
   decisions, and any two runs can be compared question by question;
@@ -94,8 +89,6 @@ touched. The paper contributes:
   evidence, reported with its measured quality and with a stage-level
   decomposition of the gain read off ordinary runs rather than ablation
   reruns;
-\item a transfer result: with no step changed, the same pipeline lifts an
-  earlier version of the model from 68.8\% to 72.0\% and a model of a
-  different family and developer from 59.8\% to 66.5\%, so what the gate
-  accepted is not specific to the model it was measured against.
+\item transfer measurements with other generating models, including a
+  GigaCode improvement from 59.8\% to 66.5\% on BIRD development.
 \end{itemize}

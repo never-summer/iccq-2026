@@ -1,22 +1,22 @@
 \section{Experiments}
+\label{sec:experiments}
 
 All development ran against the development set of BIRD~\cite{bird}, 1,534
-questions that the benchmark splits into 925 simple, 464 moderate, and 145
-challenging. The test set is private, and no part of the development loop
-touched it. Quality is reported as execution accuracy, scored exactly as every
-gate decision was scored (Section~\ref{sec:methodology}): a prediction counts
-as correct when the rows it returns, compared as a set, agree with the rows of
-the reference query.
+questions split into 925 simple, 464 moderate, and 145 challenging.
+Quality is measured by executing generated and reference SQL and comparing
+the returned rows as sets (Section~\ref{sec:methodology}). The private test
+set was evaluated by the BIRD team.
 
-Three generating models appear in the measurements. Claude Opus~4.8 is the
-model the pipeline was developed against, and every acceptance and rollback
-decision was measured on it. Claude Opus~4.6 is an earlier version of the same
-model. GigaCode~1.6 comes from a different model family and a different
-developer. Each model appears in two configurations. Single-shot issues
-one call carrying the instructions, the database schema, and the question, and
-takes the returned query as the answer. Agent-built runs the 17-step pipeline
-that the quality gate admitted. Table~\ref{tab:results} reports the six
-configurations.
+Development spanned several Claude Opus versions; the main pipeline result
+reported here uses Opus~4.8. We also report results with Opus~4.6 and
+GigaCode~1.6. Single-shot denotes one SQL-generation call with instructions,
+the database schema, and the question. The 17-step pipeline uses the steps
+described in Section~\ref{sec:pipeline}. Table~\ref{tab:results} distinguishes
+our own measurements from the published Opus~4.6 single-shot baseline.
+
+All generative calls in the GigaCode run used GigaCode; the provider supplied
+API access and documentation.\footnote{\url{https://gitverse.ru/features/gigacode/}}
+
 
 \begin{table}[t]
 \caption{Execution accuracy (EX, \%) on BIRD by difficulty tier. Single-shot is
@@ -56,29 +56,21 @@ and listed on the leaderboard~\cite{bird-leaderboard}.
 \end{minipage}
 \end{table}
 
-The comparison that answers RQ1 is the same-model pair. One call to Claude
-Opus~4.8 scores 70.9 on the development set, and the pipeline of steps admitted
-by the gate, built around that same model, scores 76.2. The model is identical
-in both rows, so the 5.3 points come from the context the pipeline builds for
-the model and from the repairs it applies to the query the model returns. Seventeen steps written
-by an agent and admitted on measured effect alone compose into an artifact that
-is better than the model called directly.
+For RQ1, the Opus~4.8 pipeline scored 76.2\% on development, compared with
+70.9\% for single-shot generation, a difference of 5.3 percentage points.
+The measured improvement reflects the complete pipeline, from context
+preparation through candidate selection and guarded SQL repair.
 
-RQ3 asks whether that quality belongs to the model it was measured against.
-Re-run with no step changed, the pipeline lifts Claude Opus~4.6 from 68.8 to
-72.0, a gain of 3.2 points, and GigaCode~1.6 from 59.8 to 66.5, a gain of 6.7.
-The gain reproduces on all three models and spans 3.2 to 6.7 points, and it
-does not track the strength of the base model: the largest gain belongs to the
-weakest of the three, and the cross-vendor model gains more than the earlier
-version of the model the steps were tuned on. Both transfer measurements are
-development-set measurements, since the test set was submitted only for the
-model the pipeline was developed against. There the agent-built pipeline scores
-81.3---third on the BIRD leaderboard as of August 2026 and 0.6 points off
-first place~\cite{bird-leaderboard}---which is external evidence that the
-accepted artifact holds up on questions that no development decision could have
-been fitted to. The single-shot baseline also rises between the two sets, by 1.4
-points on Claude Opus~4.6, so part of the difference between 76.2 and 81.3
-belongs to the question sets rather than to the pipeline.
+For RQ3, the GigaCode~1.6 rows differ by 6.7 percentage points on development.
+The Opus~4.6 pipeline scored 72.0\%; its 68.8\% single-shot comparator is a
+published BIRD result obtained under a different evaluation setup. The latter
+is a reference point, not a paired measurement under our harness. The judge
+and DISTINCT thresholds were calibrated on Claude-produced development
+records and were not separately calibrated or validated for GigaCode.
+
+The BIRD team reported 81.3\% for our Opus~4.8 pipeline on the private test
+set~\cite{bird-leaderboard}, whose reference queries were unavailable to us.
+This evaluates the pipeline on questions unavailable during development.
 
 RQ2 asks which defects the mining surfaced and what each repair is worth. The
 answer is read off ordinary runs. Because every step records what it received
@@ -93,12 +85,15 @@ effect is local to the step's position in the chain, so one question can be
 saved by one step and broken by another, which happened four times. As a
 consistency check, the recomputed final verdicts agree with the verdicts
 recorded by the run on all 1,532 questions the reconstruction could
-re-execute.
+re-execute. These are local comparisons between recorded intermediate
+queries from one run. They do not estimate variability across fresh model
+calls or the end-to-end effect of removing a step and rerunning downstream
+generation.
 
 \begin{table}[t]
 \caption{Contribution of each step that rewrites the query, reconstructed from
 the recorded inputs and outputs of one ordinary run: Claude Opus~4.8 with the
-agent-built pipeline, the 76.2\% row of Table~\ref{tab:results}. Fired counts
+17-step pipeline, the local 76.2\% row of Table~\ref{tab:results}. Fired counts
 the questions whose query the step rewrote, saved and broke count the rewrites
 that turned a wrong answer right and a right answer wrong, and net is their
 difference. Step~9 sets the baseline of 1,137 correct answers out of 1,534.
@@ -132,34 +127,32 @@ table omits them and their activity is reported here: table selection, schema
 building, column resolution, and schema focusing run on all 1,534 questions,
 cell-value hints are found on 867, conflicting-concept annotations are injected
 into 1,201, the reversed linker adds tables on 16, and the table auditor
-expands a selection once. Of the total gain of 5.3 points over single-shot
-generation, 3.2 are already present when the generator returns its query, which
-is correct on 1,137 questions or 74.1\%, and the remaining 2.1 points are the
-net $+32$ answers added by the steps that check and repair that query. More
-than half of those 32 come from one step---the removal of a \texttt{DISTINCT}
-inside a count over a key column---which is a database-specific counting
-convention rather than a reasoning failure. The judge opened its candidate
-pool on 118 questions and rewrote 46 of them. It nets $+7$ but works noisily:
-only 19 of the 46 rewrites changed a verdict, 13 for the better and 6 for the
-worse, and 22 replaced one wrong query with another. The two steps that never fire found nothing to repair
-across all 1,534 questions, because the failures that motivated them are
-prevented earlier in the chain in this version of the pipeline.
+expands a selection once. Before post-generation rewrites, 1,137 answers were correct (74.1\%). The
+recorded rewrites added a net 32 correct answers, or 2.1 percentage points.
+The guarded DISTINCT correction accounted for 17 of the 32 net corrections.
+It combines several checks, while its measured benefit here is agreement
+with the reference counting semantics. The judge opened its candidate
+pool on 118 questions and changed 46 queries; 13 changes corrected an answer
+and 6 introduced an error. Two conditional repair steps remained inactive in this run; their
+activation counts are retained in the table alongside the active steps.
 
-Sliced by difficulty, the gain is uneven. Against the
-single-shot baseline on Claude Opus~4.8, the pipeline adds 5.6 points on simple
-questions and 7.3 on moderate ones, and loses 3.4 on challenging ones, from
-64.8 to 61.4. Across all Claude Opus configurations in
-Table~\ref{tab:results} the challenging tier stays between 61 and 65, whether
-the query comes from one call or from the pipeline. We read all 56 challenging
-misses of the final run by hand. In most of them the prediction is a
-defensible reading of the question that differs from the reference only in
-which columns it projects or in which quantity it counts, in several the
-reference contradicts the evidence hint attached to the question, and a
-minority are outright reasoning errors. No rewrite aimed at any of these
-classes survived measurement. What the gate harvests, on this model, are
-convention-level defects that recur across many questions, and those are
-concentrated in the simple and moderate tiers. The challenging tier is not
-inert everywhere. On GigaCode~1.6 the pipeline adds 9.0 points there, from 43.4
-to 52.4, more than it adds on simple questions (7.4) or moderate ones (4.7). A
-tier that does not move for a strong model moves for a weaker one, which places
-the ceiling with the model rather than with the pipeline.
+The gain varied by difficulty. For Opus~4.8, the pipeline increased the simple
+and moderate scores by 5.6 and 7.3 percentage points, while the challenging
+score fell from 64.8\% to 61.4\%. In the GigaCode rows, the challenging score
+rose from 43.4\% to 52.4\%. The agent investigated failures question by question, comparing the wording with
+selected tables, generated SQL, execution results, and step decisions.
+This analysis locates concrete failures such as a look-alike column being
+selected or a later rewrite undoing a correction. It also distinguishes
+pipeline errors from disagreements about the question or its reference SQL.
+
+Without model fine-tuning, two runs of the BIRD pipeline solved 91/135
+(67.41\%) and 93/135 (68.89\%) SQLite tasks in Spider2-Lite~\cite{spider2}.
+We regard this as a promising transfer result: if maintained across all
+547 tasks, this accuracy would fall within the current top ten.\footnote{\url{https://spider2-sql.github.io/}, accessed November~24, 2026.}
+
+Repeated checks on the 500-question subset showed no changes in which
+answers were correct. On the full set of 1,534 questions, about seven
+questions (roughly 0.45\%) repeatedly changed verdict as the LLM
+interpreted the same question differently.
+
+Appendix~\ref{app:usage} reports usage and timing for the June~4 run.

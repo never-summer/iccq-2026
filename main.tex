@@ -1,8 +1,12 @@
-\documentclass[sigplan,11pt,nonacm=true,anonymous]{acmart}
+\documentclass[sigplan,11pt,nonacm=true]{acmart}
 
 \settopmatter{printfolios=false,printccs=false,printacmref=false}
+\setlength{\footskip}{13pt}
 
 \graphicspath{{assets/figures/}}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,
+keepspaces=true,showstringspaces=false,frame=single}
 
 \emergencystretch=1em
 
@@ -33,7 +37,7 @@ Agent-Generated SQL}
   \city{Novosibirsk}\country{Russia}}
 \email{d.lavitskaya@g.nsu.ru}
 
-\author{Andrey Balles}
+\author{Andrej Balles}
 \affiliation{\institution{SberTech, SberData}
   \city{Moscow}\country{Russia}}
 \email{Balles.An@sber.ru}
@@ -43,12 +47,11 @@ Agent-Generated SQL}
   \city{Moscow}\country{Russia}}
 \email{shumaylovaayu@student.bmstu.ru}
 
-\renewcommand{\shortauthors}{Anonymous et al.}
+\renewcommand{\shortauthors}{Radionov et al.}
 
 \begin{abstract}
 Coding agents now write code that reaches production, and there is no settled
-discipline for deciding whether such code stays. This paper reports a case in
-which that decision rested entirely on measurement. An agent driven by a large
+discipline for deciding whether such code stays. We used measured acceptance and rollback to guide that decision. An agent driven by a large
 language model developed a seventeen-step pipeline that turns natural-language
 questions into SQL queries over relational databases. Humans designed the
 surrounding harness and wrote none of the pipeline. The harness records what
@@ -83,5 +86,9 @@ instrumentation, coding agents, text-to-SQL, large language models}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{refs/references}
+
+\clearpage
+\appendix
+\input{chapters/09_appendix}
 
 \end{document}
