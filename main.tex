@@ -1,0 +1,87 @@
+\documentclass[sigplan,11pt,nonacm=true,anonymous]{acmart}
+
+\settopmatter{printfolios=false,printccs=false,printacmref=false}
+
+\graphicspath{{assets/figures/}}
+
+\emergencystretch=1em
+
+\renewcommand{\_}{\textunderscore\allowbreak}
+
+\begin{document}
+
+\title{Measured Acceptance and Rollback as a Quality Gate for
+Agent-Generated SQL}
+
+\author{Maksim Radionov}
+\affiliation{\institution{SberTech, SberData}
+  \city{Moscow}\country{Russia}}
+\email{radionov.maxim@gmail.com}
+
+\author{Pavel Stepanov}
+\affiliation{\institution{Unison}
+  \city{Yerevan}\country{Armenia}}
+\email{pstepanov@unison.team}
+
+\author{Nikita Moskovchuk}
+\affiliation{\institution{Russian University of Transport}
+  \city{Moscow}\country{Russia}}
+\email{1277302@edu.rut-miit.ru}
+
+\author{Daria Lavitskaya}
+\affiliation{\institution{Novosibirsk State University}
+  \city{Novosibirsk}\country{Russia}}
+\email{d.lavitskaya@g.nsu.ru}
+
+\author{Andrey Balles}
+\affiliation{\institution{SberTech, SberData}
+  \city{Moscow}\country{Russia}}
+\email{Balles.An@sber.ru}
+
+\author{Alexandra Shumailova}
+\affiliation{\institution{Bauman Moscow State Technical University}
+  \city{Moscow}\country{Russia}}
+\email{shumaylovaayu@student.bmstu.ru}
+
+\renewcommand{\shortauthors}{Anonymous et al.}
+
+\begin{abstract}
+Coding agents now write code that reaches production, and there is no settled
+discipline for deciding whether such code stays. This paper reports a case in
+which that decision rested entirely on measurement. An agent driven by a large
+language model developed a seventeen-step pipeline that turns natural-language
+questions into SQL queries over relational databases. Humans designed the
+surrounding harness and wrote none of the pipeline. The harness records what
+every step saw and decided, scores each generated query by executing it and
+comparing its rows against a reference answer, and classifies the row-level
+differences, so recurring defects can be mined from run records. Every proposed
+step was admitted on one criterion, its measured effect on the quality of the
+emitted SQL, and steps whose gains did not survive later runs were rolled
+back. The resulting
+pipeline raised accuracy from 70.9\% for a
+single call to the same model to 76.2\% on the development set and 81.3\% on
+the private test set. Run unchanged with two other generating models, an earlier
+version of the same model and a model from a different developer, the
+pipeline raised both, by 3.2 and 6.7 points, so its steps capture properties
+of the task rather than habits of one model. Measured acceptance and rollback is a workable quality gate for code
+no human authored.
+\end{abstract}
+
+\keywords{quality gates, code generation, dynamic analysis, program
+instrumentation, coding agents, text-to-SQL, large language models}
+
+\maketitle
+
+\input{chapters/01_introduction}
+\input{chapters/02_related_work}
+\input{chapters/03_methodology}
+\input{chapters/04_pipeline}
+\input{chapters/05_experiments}
+\input{chapters/06_impact}
+\input{chapters/07_limitations}
+\input{chapters/08_conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs/references}
+
+\end{document}

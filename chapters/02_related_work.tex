@@ -1,0 +1,55 @@
+\section{Related Work}
+\label{sec:related-work}
+
+\paragraph{Hand-engineered text-to-SQL pipelines.} The systems at the top of
+the BIRD benchmark share a decomposed shape of schema linking, candidate
+generation, selection, and repair. It descends from DIN-SQL's decomposition of
+the task~\cite{din-sql} and was elaborated by CHASE-SQL and XiYan-SQL into
+multi-path generation with a choice among the
+candidates~\cite{chase-sql,xiyan-sql}. Automatic metadata extraction shows
+that statistical profiling of a database carries much of the benefit of an
+expert-written schema description~\cite{metadata-extraction}, and
+Agentar-Scale-SQL orchestrates internal, sequential, and parallel test-time
+scaling~\cite{agentar-scale-sql}. The pipeline reported here reuses techniques
+from this line. However, every stage in these systems records a diagnosis that
+a human researcher made by reading model outputs and deciding what to build
+next, and what such a system publishes is the accuracy that resulted, not the
+evidence behind each stage.
+
+\paragraph{Engineering discipline inside generation pipelines.} A second line
+treats the pipeline as a piece of software rather than a prompting strategy.
+DeepEye-SQL imports software engineering practice into text-to-SQL through
+modular stages, unit-test-style validation of candidate queries, and
+systematic repair~\cite{deepeye-sql}. However, the discipline there governs
+the artifact rather than the process that produced it. The architecture is
+human-designed, and nothing in the method decides which pipeline code is
+allowed to stay.
+
+\paragraph{Coding agents and the gates on what they write.} A third line
+studies agents that write code. SWE-bench asks whether a model can resolve
+real issue reports by editing a repository until its tests
+pass~\cite{swe-bench}, and SWE-agent shows that how much an agent achieves
+depends on the interface it works through~\cite{swe-agent}. However, the gate
+on the code these agents produce is a test suite someone else wrote or a human
+reading the diff. Neither applies to a pipeline stage whose correctness is
+settled by the quality of the queries emitted downstream of it.
+
+\paragraph{Autonomous development loops for text-to-SQL}
+\citet{ai-scientist-enterprise} adapt an autonomous research framework to
+text-to-SQL, the framework running the loop with no human in it and
+judging each proposal by the benchmark score it produces. An earlier run of
+the framework, in which the executor model drew its ideas from a general
+prompt, left 7 of its 10 ideas with no measurable improvement, and what
+repaired the ratio was a planning stage producing granular, validated
+blueprints, with the implementation model unchanged. However, the signal that governs admission is an aggregate score,
+which reports that a proposal failed to help without localizing the defect it
+was meant to fix.
+
+The gate studied here differs from all four on one axis. Proposals start from
+a failure signature localized in the records of a previous run rather than
+from a score or a general prompt, admission is decided by a measurement over
+the executed artifact rather than by a test suite or a reviewer, and rollback
+belongs to the discipline, so a step leaves the pipeline once a later run
+stops supporting it. To the best of our knowledge, whether measured
+acceptance and rollback alone suffices as the quality gate for an entire
+generation pipeline written by an agent has not been studied yet.

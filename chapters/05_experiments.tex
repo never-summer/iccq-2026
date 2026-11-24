@@ -1,0 +1,165 @@
+\section{Experiments}
+
+All development ran against the development set of BIRD~\cite{bird}, 1,534
+questions that the benchmark splits into 925 simple, 464 moderate, and 145
+challenging. The test set is private, and no part of the development loop
+touched it. Quality is reported as execution accuracy, scored exactly as every
+gate decision was scored (Section~\ref{sec:methodology}): a prediction counts
+as correct when the rows it returns, compared as a set, agree with the rows of
+the reference query.
+
+Three generating models appear in the measurements. Claude Opus~4.8 is the
+model the pipeline was developed against, and every acceptance and rollback
+decision was measured on it. Claude Opus~4.6 is an earlier version of the same
+model. GigaCode~1.6 comes from a different model family and a different
+developer. Each model appears in two configurations. Single-shot issues
+one call carrying the instructions, the database schema, and the question, and
+takes the returned query as the answer. Agent-built runs the 17-step pipeline
+that the quality gate admitted. Table~\ref{tab:results} reports the six
+configurations.
+
+\begin{table}[t]
+\caption{Execution accuracy (EX, \%) on BIRD by difficulty tier. Single-shot is
+one call to the model, carrying the instructions, the database schema, and the
+question. Agent-built is the 17-step pipeline the quality gate produced, run
+unchanged on all three models. A dash marks a score that was not
+measured.}
+\label{tab:results}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Configuration & Simp. & Mod. & Chall. & Dev & Test \\
+\midrule
+\multicolumn{6}{@{}l}{Claude Opus 4.6} \\
+\quad single-shot & --- & --- & --- & 68.8\rlap{$^*$} & 70.2\rlap{$^*$} \\
+\quad agent-built & 77.1 & 64.7 & 62.8 & 72.0 & --- \\
+\addlinespace[2pt]
+\multicolumn{6}{@{}l}{Claude Opus 4.8} \\
+\quad single-shot & 75.0 & 64.7 & 64.8 & 70.9 & --- \\
+\quad agent-built & 80.7 & 72.0 & 61.4 & 76.2 & 81.3\rlap{$^\dagger$} \\
+\addlinespace[2pt]
+\multicolumn{6}{@{}l}{GigaCode 1.6} \\
+\quad single-shot & 66.2 & 52.2 & 43.4 & 59.8 & --- \\
+\quad agent-built & 73.5 & 56.9 & 52.4 & 66.5 & --- \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\begin{minipage}{\columnwidth}
+\footnotesize\raggedright
+$^*$\,Official BIRD leaderboard baseline for Claude Opus~4.6, quoted
+from~\cite{bird-leaderboard}.\\
+$^\dagger$\,Our submission, scored by the BIRD team on the private test set
+and listed on the leaderboard~\cite{bird-leaderboard}.
+\end{minipage}
+\end{table}
+
+The comparison that answers RQ1 is the same-model pair. One call to Claude
+Opus~4.8 scores 70.9 on the development set, and the pipeline of steps admitted
+by the gate, built around that same model, scores 76.2. The model is identical
+in both rows, so the 5.3 points come from the context the pipeline builds for
+the model and from the repairs it applies to the query the model returns. Seventeen steps written
+by an agent and admitted on measured effect alone compose into an artifact that
+is better than the model called directly.
+
+RQ3 asks whether that quality belongs to the model it was measured against.
+Re-run with no step changed, the pipeline lifts Claude Opus~4.6 from 68.8 to
+72.0, a gain of 3.2 points, and GigaCode~1.6 from 59.8 to 66.5, a gain of 6.7.
+The gain reproduces on all three models and spans 3.2 to 6.7 points, and it
+does not track the strength of the base model: the largest gain belongs to the
+weakest of the three, and the cross-vendor model gains more than the earlier
+version of the model the steps were tuned on. Both transfer measurements are
+development-set measurements, since the test set was submitted only for the
+model the pipeline was developed against. There the agent-built pipeline scores
+81.3---third on the BIRD leaderboard as of August 2026 and 0.6 points off
+first place~\cite{bird-leaderboard}---which is external evidence that the
+accepted artifact holds up on questions that no development decision could have
+been fitted to. The single-shot baseline also rises between the two sets, by 1.4
+points on Claude Opus~4.6, so part of the difference between 76.2 and 81.3
+belongs to the question sets rather than to the pipeline.
+
+RQ2 asks which defects the mining surfaced and what each repair is worth. The
+answer is read off ordinary runs. Because every step records what it received
+and what it returned, the run that scores 76.2 can be decomposed after the fact
+without a single ablation rerun. From the 51,706 recorded step spans of that
+run, each question's query was reconstructed at every stage of the chain,
+executed against its database, and compared with the reference by the same
+comparator the run itself used, 3,013 distinct executions in total. A step
+\emph{saved} a question when the query entering it was wrong and the query
+leaving it was right, and \emph{broke} the question in the reverse case. The
+effect is local to the step's position in the chain, so one question can be
+saved by one step and broken by another, which happened four times. As a
+consistency check, the recomputed final verdicts agree with the verdicts
+recorded by the run on all 1,532 questions the reconstruction could
+re-execute.
+
+\begin{table}[t]
+\caption{Contribution of each step that rewrites the query, reconstructed from
+the recorded inputs and outputs of one ordinary run: Claude Opus~4.8 with the
+agent-built pipeline, the 76.2\% row of Table~\ref{tab:results}. Fired counts
+the questions whose query the step rewrote, saved and broke count the rewrites
+that turned a wrong answer right and a right answer wrong, and net is their
+difference. Step~9 sets the baseline of 1,137 correct answers out of 1,534.
+Steps~1--8 do not touch the query and admit no per-question attribution.}
+\label{tab:contrib}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}rlrrrr@{}}
+\toprule
+\# & Step & Fired & Saved & Broke & Net \\
+\midrule
+9 & \texttt{generate\_sql} & 1,534 & --- & --- & --- \\
+10 & \texttt{judge\_sql} & 46 & 13 & 6 & $+7$ \\
+11 & \texttt{fix\_join\_type\_mismatch} & 0 & 0 & 0 & 0 \\
+12 & \texttt{add\_null\_filters} & 0 & 0 & 0 & 0 \\
+13 & \texttt{audit\_select\_list} & 11 & 3 & 3 & 0 \\
+14 & \texttt{repair\_empty\_result} & 6 & 4 & 0 & $+4$ \\
+15 & \texttt{strip\_distinct\_count\_id} & 51 & 25 & 8 & $+17$ \\
+16 & \texttt{uppercase\_yes\_no} & 3 & 1 & 0 & $+1$ \\
+17 & \texttt{cast\_real\_division} & 27 & 4 & 1 & $+3$ \\
+\midrule
+\multicolumn{5}{@{}l}{Net after generation} & $+32$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:contrib} reports the steps that rewrite the query. The eight
+steps before generation prepare the generator's input and never edit a query, so the
+table omits them and their activity is reported here: table selection, schema
+building, column resolution, and schema focusing run on all 1,534 questions,
+cell-value hints are found on 867, conflicting-concept annotations are injected
+into 1,201, the reversed linker adds tables on 16, and the table auditor
+expands a selection once. Of the total gain of 5.3 points over single-shot
+generation, 3.2 are already present when the generator returns its query, which
+is correct on 1,137 questions or 74.1\%, and the remaining 2.1 points are the
+net $+32$ answers added by the steps that check and repair that query. More
+than half of those 32 come from one step---the removal of a \texttt{DISTINCT}
+inside a count over a key column---which is a database-specific counting
+convention rather than a reasoning failure. The judge opened its candidate
+pool on 118 questions and rewrote 46 of them. It nets $+7$ but works noisily:
+only 19 of the 46 rewrites changed a verdict, 13 for the better and 6 for the
+worse, and 22 replaced one wrong query with another. The two steps that never fire found nothing to repair
+across all 1,534 questions, because the failures that motivated them are
+prevented earlier in the chain in this version of the pipeline.
+
+Sliced by difficulty, the gain is uneven. Against the
+single-shot baseline on Claude Opus~4.8, the pipeline adds 5.6 points on simple
+questions and 7.3 on moderate ones, and loses 3.4 on challenging ones, from
+64.8 to 61.4. Across all Claude Opus configurations in
+Table~\ref{tab:results} the challenging tier stays between 61 and 65, whether
+the query comes from one call or from the pipeline. We read all 56 challenging
+misses of the final run by hand. In most of them the prediction is a
+defensible reading of the question that differs from the reference only in
+which columns it projects or in which quantity it counts, in several the
+reference contradicts the evidence hint attached to the question, and a
+minority are outright reasoning errors. No rewrite aimed at any of these
+classes survived measurement. What the gate harvests, on this model, are
+convention-level defects that recur across many questions, and those are
+concentrated in the simple and moderate tiers. The challenging tier is not
+inert everywhere. On GigaCode~1.6 the pipeline adds 9.0 points there, from 43.4
+to 52.4, more than it adds on simple questions (7.4) or moderate ones (4.7). A
+tier that does not move for a strong model moves for a weaker one, which places
+the ceiling with the model rather than with the pipeline.

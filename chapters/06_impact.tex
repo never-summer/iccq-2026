@@ -1,0 +1,68 @@
+\section{Practical Recommendations}
+\label{sec:impact}
+
+Reproducing this discipline does not require the pipeline of
+Section~\ref{sec:pipeline}. It requires the apparatus, the rule, and a task
+whose output can be run.
+
+\paragraph{The instrumentation was ordinary.} Nothing in the harness of
+Section~\ref{sec:methodology} is a research contribution in its own right. One
+command runs a named pipeline version over a chosen question set. One
+append-only file keeps a record per question. A convention obliges every step
+to report what it received and what it decided, so code added later arrives
+instrumented. A trace store holds the spans, and each run registers itself
+against a pinned question set so that any two runs align question by question.
+Each of those pieces is standard engineering practice, which is the point: no
+analysis technique had to be invented before the gate could
+operate. One property did matter: the record is kept per question and per
+step, not per run. A script that reports only the final percentage cannot
+support the gate, because localizing a defect and deciding a rollback both
+need to know which questions changed and how. The upgrade is small, though.
+Such a script already computes a verdict for every question before averaging
+them into one number; keeping those verdicts, and obliging each step to log
+what it received and decided, is most of what this harness is.
+
+\paragraph{The gate transfers on three conditions.} Stated as a procedure, the
+gate names nothing specific to SQL. It needs an output that can be executed
+and not merely read, a reference for each item so that the executed result
+can be scored item by item, and a way to enumerate in advance the items a
+change can affect, so the change is replayed over that closed set before it
+competes inside a full run. Rollback then follows from the same records,
+because two runs scored item by item can be differenced. A generator of code
+judged by tests, or of data transformations judged against expected outputs,
+satisfies those conditions as stated. No such task was run through the gate
+here, and Section~\ref{sec:limitations} owns that.
+
+\paragraph{Decompose from records, not from reruns.} Because every step
+recorded its input and its output, the stage-level attribution in
+Table~\ref{tab:contrib} was reconstructed from one ordinary run instead of a
+series of ablation reruns, each of which would have cost a full pass over the
+question set. A team that keeps the self-reporting convention gets that
+decomposition for the price of storage, and gets it for runs it has already
+made, not only for experiments it thought to design. The limit is
+visible in the same table. Steps that prepare context rather than rewrite the
+artifact cannot be attributed this way, and only their activity can be counted.
+
+\paragraph{Adopt the guarded shape rather than rediscovering it.} The gate
+selected the conservative design of Section~\ref{sec:pipeline} instead of
+prescribing it, because an unguarded rewrite repairs its targets and breaks
+neighbors it never considered, and its net effect over a large question set
+comes out small or negative. A team need not spend runs relearning that. Make
+it the convention for new steps that a step fires only on positive evidence of
+a defect and restores what it received whenever its own check is not satisfied,
+so that measurement decides only the question that remains open---whether the
+step is worth having at all.
+
+\paragraph{Where this pays, and where it does not.} The gate harvests defects
+that recur at the level of convention across many items and that some check can
+recognize once the records make them legible. Where a corpus carries such
+defects and the artifact can be run, they are found without anyone enumerating
+them in advance. Where the corpus carries no such defects, the gate admits
+nothing.
+Defects the records exposed but no predicate could recognize produced no step
+at all, and the difficulty tiers of Table~\ref{tab:results} show that what
+remains is limited by the generating model, not by the pipeline around it. In
+the division of labor that emerged, the agent supplied volume and patience,
+reading every record, proposing a step against each signature that recurred,
+and instrumenting what it wrote, while the measurement supplied the judgment
+about what to keep.
